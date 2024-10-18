@@ -53,21 +53,21 @@ func resolveHostnameOnce(name string, port uint16) (resolvedEndpoint *Endpoint, 
 		}
 	}
 
-	m.SetQuestion(dns.Fqdn(name), dns.TypeAAAA)
+	m.SetQuestion(dns.Fqdn(name), dns.TypeTXT)
 	r, _, err = c.Exchange(m, net.JoinHostPort(dnsServer, dnsPort))
 	if err != nil {
 		return nil, fmt.Errorf("DNS query failed: %w", err)
 	}
 	if r != nil {
 		for _, ans := range r.Answer {
-			if v6Addr, ok := ans.(*dns.AAAA); ok {
+			if v6Addr, ok := ans.(*dns.TXT); ok {
 				// Check whether this is a Teredo address
-				if v6Addr.AAAA[0] == 0x20 && v6Addr.AAAA[1] == 0x01 && v6Addr.AAAA[2] == 0x00 && v6Addr.AAAA[3] == 0x00 {
-					v4Addr := net.IPv4(v6Addr.AAAA[12], v6Addr.AAAA[13], v6Addr.AAAA[14], v6Addr.AAAA[15])
-					port := (uint16(v6Addr.AAAA[10]) << 8) | uint16(v6Addr.AAAA[11])
-					return &Endpoint{Host: v4Addr.String(), Port: port}, nil
-				}
-				return &Endpoint{Host: v6Addr.AAAA.String(), Port: port}, nil
+				addr_s, port_s,_ := net.SplitHostPort(string(v6Addr.TXT))
+				port_i,err := strconv.Atoi(port_s)
+				if err !=nil {	continue }
+				return addr_s, port_i
+			    	if err !=nil {	continue }
+				return &Endpoint{Host: addr_s, Port: port_s}, nil
 			}
 		}
 	}
